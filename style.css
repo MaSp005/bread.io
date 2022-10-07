@@ -10,6 +10,7 @@
 :root {
   --col-bread1: #d39d82;
   --col-bread2: #fbe8b6;
+  --col-bg: #070707;
 }
 
 body, main, canvas, .login {
@@ -35,7 +36,7 @@ canvas, .login {
 }
 .login h1 {
   font-family: Silkscreen;
-  margin: -5% auto 20px;
+  margin: 0 auto 70px;
 }
 .login h1 .bread {
   content: "";
@@ -64,20 +65,24 @@ canvas, .login {
 }
 .login button {
   border: none;
-  background-color: var(--col-bread2);
+  background-image: linear-gradient(to right, var(--col-bread2), var(--col-bread1));
   font-size: 200%;
   width: fit-content;
   padding: 15px;
   margin: 10px auto;
   border-radius: 10px;
   cursor: pointer;
-  transition: background-color .3s;
+  transition: transform .3s;
 }
 .login button:hover {
-  background-color: var(--col-bread1);
+  transform: scale(1.1);
 }
 .login p.error {
   color: red;
   min-height: 18px;
   font-family: Rajdhani;
+}
+
+canvas {
+  background-color: var(--col-bg);
 }
