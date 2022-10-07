@@ -1,0 +1,83 @@
+@font-face {
+  font-family: Silkscreen;
+  src: url(./src/Silkscreen.ttf);
+}
+@font-face {
+  font-family: Rajdhani;
+  src: url(./src/Rajdhani.ttf);
+}
+
+:root {
+  --col-bread1: #d39d82;
+  --col-bread2: #fbe8b6;
+}
+
+body, main, canvas, .login {
+  width: 100vw;
+  height: 100vh;
+  margin: 0;
+}
+canvas, .login {
+  position: fixed;
+  top: 0;
+  left: 0;
+}
+.login {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  color: white;
+}
+.login > * {
+  text-align: center;
+  width: 80%;
+  margin: 0 auto;
+}
+.login h1 {
+  font-family: Silkscreen;
+  margin: -5% auto 20px;
+}
+.login h1 .bread {
+  content: "";
+  display: inline-block;
+  height: 80%;
+  aspect-ratio: 1;
+  background-image: url(./src/bread.png);
+  background-size: contain;
+  background-repeat: no-repeat;
+  background-position: center;
+  margin-right: 5px;
+  vertical-align: -10%;
+}
+.login h3, .howtoplay {
+  font-family: Rajdhani;
+  letter-spacing: 2px;
+}
+.login input {
+  font-size: 200%;
+  border: none;
+  outline: none;
+  font-family: Rajdhani;
+  background: none;
+  border-bottom: 1px solid var(--col-bread1);
+  color: var(--col-bread2);
+}
+.login button {
+  border: none;
+  background-color: var(--col-bread2);
+  font-size: 200%;
+  width: fit-content;
+  padding: 15px;
+  margin: 10px auto;
+  border-radius: 10px;
+  cursor: pointer;
+  transition: background-color .3s;
+}
+.login button:hover {
+  background-color: var(--col-bread1);
+}
+.login p.error {
+  color: red;
+  min-height: 18px;
+  font-family: Rajdhani;
+}
