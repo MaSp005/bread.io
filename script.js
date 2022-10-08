@@ -5,7 +5,6 @@ const errorel = document.querySelector("p.error");
 const colors = {
   bread1: "#d39d82",
   bread2: "#fbe8b6",
-  bg: "#070707",
   gridcol: "#222"
 }
 
@@ -27,25 +26,38 @@ let lastinp = {};
 let inpchange = false;
 let moving = -1;
 let lt = 0;
+let collected = [0, 0, 0, 0, 0];
 
-// TODO: Bread rendering
-function drawbread(x, y, l, a) {
+// LEGACY: Bread rendering
+function drawbread(x, y, l, a, n) {
   // switch (a) {
-  // console.log("drawing bread at", x, y);
+  // console.log("drawing bread at", x, y, l);
   ctx.fillStyle = colors.bread1;
   ctx.fillRect(x - l / 2, y - 50, l, 100);
   ctx.fillStyle = colors.bread2;
   ctx.fillRect(x - l / 3, y - 40, l / 1.5, 80);
+  ctx.fillStyle = "white";
+  ctx.textAlign = "center";
+  ctx.fillText(n, x, y - 70);
 }
 
-function drawingr(x, y, type) {
+function drawingr(x, y, type, t) {
+  ctx.globalAlpha = (15000 - t) / 3000;
   ctx.fillStyle = ["#f00", "#ff0", "#0f0", "#0ff", "#00f"][type];
-  ctx.fillRect(x - 20, y - 20, 40, (40));
+  ctx.fillRect(x - 20, y - 20, 40, 40);
   // Sugar
   // Salt
   // Yeast
   // Water
   // Flour
+}
+
+function checklvlup() {
+  if (!collected.every(x => x > 0)) return;
+  collected = collected.map(x => x - 1);
+  me.data.lvl++;
+  socket.send("all", { type: "lvlup", lvl: me.data.lvl });
+  me.data.prot = false;
 }
 
 function update(t) {
@@ -70,15 +82,20 @@ function update(t) {
       [me, ...players].forEach((p, i) => {
         if (i && p.id == me.id) return;
         if (!p.data?.pos) return;
-        drawbread(p.data.pos[0] - camera[0], p.data.pos[1] - camera[1], 100, moving);
+        drawbread(
+          p.data.pos[0] - camera[0],
+          p.data.pos[1] - camera[1],
+          p.data.lvl * 30 + 40,
+          moving, p.name
+        );
         if (p.data.moving > -1 && i) {
-          p.data.pos[0] += Math.sin(p.data.moving / 4 * Math.PI) * td / 10;
-          p.data.pos[1] -= Math.cos(p.data.moving / 4 * Math.PI) * td / 10;
+          p.data.pos[0] += Math.sin(p.data.moving / 4 * Math.PI) * td / 5;
+          p.data.pos[1] -= Math.cos(p.data.moving / 4 * Math.PI) * td / 5;
         }
       })
       if (inpchange) {
         inpchange = false;
-        if (!Object.keys(inp).find(x => inp[x])) moving = -1;
+        moving = -1;
         if (inp.w) moving = 0;
         if (inp.d) moving = 2;
         if (inp.s) moving = 4;
@@ -90,17 +107,30 @@ function update(t) {
         socket.send("all", { type: "usermove", direction: moving, pos: me.data.pos });
       }
       if (moving > -1) {
-        me.data.pos[0] += Math.sin(moving / 4 * Math.PI) * td / 10;
-        me.data.pos[1] -= Math.cos(moving / 4 * Math.PI) * td / 10;
+        me.data.pos[0] += Math.sin(moving / 4 * Math.PI) * td / 5;
+        me.data.pos[1] -= Math.cos(moving / 4 * Math.PI) * td / 5;
       }
-      ingrs = ingrs.filter(x => t - x.spawned < 60000);
+      ingrs = ingrs.filter(x => t - x.spawned < 15000);
       ingrs.forEach((e, i) => {
-        if (Math.abs(e.x - me.data.pos[0]) + Math.abs(e.y - me.data.pos[1]) < 40) {
+        if (Math.abs(e.x - me.data.pos[0]) + Math.abs(e.y - me.data.pos[1]) < 60) {
           socket.send("all", { type: "foodcoll", x: e.x, y: e.y });
+          collected[e.type]++;
+          checklvlup();
           ingrs.splice(i, 1);
         }
-        drawingr(e.x - camera[0], e.y - camera[1], e.type);
+        drawingr(e.x - camera[0], e.y - camera[1], e.type, t - e.spawned);
       })
+      ctx.globalAlpha = 1;
+      ctx.font = "40px Silkscreen";
+      ctx.filter = "drop-shadow(2px 2px 10px black)";
+      for (i = 0; i < 5; i++) {
+        drawingr(80 * i + 40, h - 40, i);
+        ctx.fillStyle = "white";
+        ctx.fillText(collected[i], 80 * i + 80, h - 20);
+      }
+      ctx.textAlign = "right";
+      ctx.fillText(me.data.lvl, w - 20, h - 20);
+      ctx.filter = "none";
   }
   lastinp = JSON.parse(JSON.stringify(inp));
   lt = t;
@@ -108,7 +138,6 @@ function update(t) {
 }
 
 async function newplayer() {
-  alert("new player!");
   players = await socket.list();
 }
 async function playerleft() {
@@ -135,6 +164,14 @@ function login(name) {
         players = l;
         console.log(m, d);
         me.data = d.data;
+        me.data.lvl = 0;
+        me.data.prot = true;
+        ingrs = d.ingrs.map(i=>({
+          type: i.ingr,
+          x: i.pos[0],
+          y: i.pos[1],
+          spawned: i.spawned - lt
+        }));
         ping = me.ping[0] + me.ping[1];
         view = "game";
         console.log(me);
@@ -146,12 +183,15 @@ function login(name) {
   });
   socket.on("foodcoll", d => {
     ingrs.splice(ingrs.findIndex(e => e.x == d.x && e.y == d.y), 1);
-  })
+  });
   socket.on("usermove", c => {
     console.log("user moved", c);
     let send = players.find(x => x.id == c.sender);
     send.data.moving = c.direction;
     send.data.pos = c.pos;
+  });
+  socket.on("slice", d => {
+    if (me.data.pos[0] - d.x) { }
   })
   socket.on("clientjoin", newplayer);
   socket.on("clientleft", playerleft);
@@ -190,7 +230,7 @@ document.addEventListener("keyup", e => {
 });
 document.addEventListener("click", e => {
   if (view == "game") {
-
+    // TODO: slicing
   }
 })
 
@@ -204,3 +244,6 @@ function connectionerror() {
     This will be fixed as soon as possible!`;
   document.querySelector(".login").style.display = "";
 }
+
+// TODO: shrinking
+// TODO: death

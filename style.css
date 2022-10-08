@@ -10,7 +10,6 @@
 :root {
   --col-bread1: #d39d82;
   --col-bread2: #fbe8b6;
-  --col-bg: #070707;
 }
 
 body, main, canvas, .login {
@@ -47,7 +46,7 @@ canvas, .login {
   background-size: contain;
   background-repeat: no-repeat;
   background-position: center;
-  margin-right: 5px;
+  margin-right: 7px;
   vertical-align: -10%;
 }
 .login h3, .howtoplay {
@@ -84,5 +83,5 @@ canvas, .login {
 }
 
 canvas {
-  background-color: var(--col-bg);
+  background-image: radial-gradient(circle at center, #171717, #070707);
 }
