@@ -5,7 +5,8 @@ const errorel = document.querySelector("p.error");
 const colors = {
   bread1: "#d39d82",
   bread2: "#fbe8b6",
-  bg: "#070707"
+  bg: "#070707",
+  gridcol: "#222"
 }
 
 let w = canvas.width = window.innerWidth,
@@ -23,6 +24,7 @@ let inp = {};
 let lastinp = {};
 let inpchange = false;
 let moving = -1;
+let lt = 0;
 
 // TODO: Bread rendering
 function drawbread(x, y, l, a) {
@@ -34,10 +36,9 @@ function drawbread(x, y, l, a) {
   ctx.fillRect(x - l / 3, y - 40, l / 1.5, 80);
 }
 
-function update() {
+function update(t) {
+  let td = t - lt;
   ctx.clearRect(0, 0, w, h);
-  // ctx.fillStyle = colors.bg;
-  // ctx.fillRect(0, 0, w, h);
   switch (view) {
     case "loading":
       ctx.font = "20px Silkscreen";
@@ -47,13 +48,19 @@ function update() {
       break;
     case "game":
       camera = [me.data.pos[0] - w / 2, me.data.pos[1] - h / 2];
+      for (i = 0; i < 20; i++) {
+        if (w > h) ctx.fillRect(w / 20 * i + (-camera[0] % (w / 20)), 0, 1, h);
+        if (w > h) ctx.fillRect(0, w / 20 * i + (-camera[1] % (w / 20)), w, 1);
+        if (w < h) ctx.fillRect(h / 20 * i + (-camera[0] % (h / 20)), 0, 1, h);
+        if (w < h) ctx.fillRect(0, h / 20 * i + (-camera[1] % (h / 20)), w, 1);
+      }
       [me, ...players].forEach((p, i) => {
         if (i && p.id == me.id) return;
         if (!p.data?.pos) return;
         drawbread(p.data.pos[0] - camera[0], p.data.pos[1] - camera[1], 100, moving);
         if (p.data.moving > -1 && i) {
-          p.data.pos[0] += Math.sin(p.data.moving / 4 * Math.PI);
-          p.data.pos[1] -= Math.cos(p.data.moving / 4 * Math.PI);
+          p.data.pos[0] += Math.sin(p.data.moving / 4 * Math.PI) * td / 10;
+          p.data.pos[1] -= Math.cos(p.data.moving / 4 * Math.PI) * td / 10;
         }
       })
       if (inpchange) {
@@ -67,14 +74,16 @@ function update() {
         if (inp.d && inp.s) moving = 3;
         if (inp.s && inp.a) moving = 5;
         if (inp.a && inp.w) moving = 7;
-        socket.send("all", { type: "usermove", direction: moving });
+        socket.send("all", { type: "usermove", direction: moving, pos: me.data.pos });
       }
       if (moving > -1) {
-        me.data.pos[0] += Math.sin(moving / 4 * Math.PI);
-        me.data.pos[1] -= Math.cos(moving / 4 * Math.PI);
+        me.data.pos[0] += Math.sin(moving / 4 * Math.PI) * td / 10;
+        me.data.pos[1] -= Math.cos(moving / 4 * Math.PI) * td / 10;
       }
+      ctx.fillStyle = colors.gridcol;
   }
   lastinp = JSON.parse(JSON.stringify(inp));
+  lt = t;
   requestAnimationFrame(update);
 }
 
@@ -112,8 +121,10 @@ function login(name) {
     })
   });
   socket.on("usermove", c => {
-    console.log("user moved",c);
-    players.find(x => x.id == c.sender).data.moving = c.direction;
+    console.log("user moved", c);
+    let send = players.find(x => x.id == c.sender);
+    send.data.moving = c.direction;
+    send.data.pos = c.pos;
   })
   socket.on("clientjoin", newplayer);
   socket.on("clientleft", playerleft);
