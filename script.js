@@ -17,8 +17,10 @@ let view = "login";
 let me = {};
 let ping = [];
 let players = [];
+let ingrs = [];
 let camera = [0, 0];
 let loadstage = "Connecting...";
+let connectable = true;
 
 let inp = {};
 let lastinp = {};
@@ -36,6 +38,16 @@ function drawbread(x, y, l, a) {
   ctx.fillRect(x - l / 3, y - 40, l / 1.5, 80);
 }
 
+function drawingr(x, y, type) {
+  ctx.fillStyle = ["#f00", "#ff0", "#0f0", "#0ff", "#00f"][type];
+  ctx.fillRect(x - 20, y - 20, 40, (40));
+  // Sugar
+  // Salt
+  // Yeast
+  // Water
+  // Flour
+}
+
 function update(t) {
   let td = t - lt;
   ctx.clearRect(0, 0, w, h);
@@ -48,6 +60,7 @@ function update(t) {
       break;
     case "game":
       camera = [me.data.pos[0] - w / 2, me.data.pos[1] - h / 2];
+      ctx.fillStyle = colors.gridcol;
       for (i = 0; i < 20; i++) {
         if (w > h) ctx.fillRect(w / 20 * i + (-camera[0] % (w / 20)), 0, 1, h);
         if (w > h) ctx.fillRect(0, w / 20 * i + (-camera[1] % (w / 20)), w, 1);
@@ -80,7 +93,14 @@ function update(t) {
         me.data.pos[0] += Math.sin(moving / 4 * Math.PI) * td / 10;
         me.data.pos[1] -= Math.cos(moving / 4 * Math.PI) * td / 10;
       }
-      ctx.fillStyle = colors.gridcol;
+      ingrs = ingrs.filter(x => t - x.spawned < 60000);
+      ingrs.forEach((e, i) => {
+        if (Math.abs(e.x - me.data.pos[0]) + Math.abs(e.y - me.data.pos[1]) < 40) {
+          socket.send("all", { type: "foodcoll", x: e.x, y: e.y });
+          ingrs.splice(i, 1);
+        }
+        drawingr(e.x - camera[0], e.y - camera[1], e.type);
+      })
   }
   lastinp = JSON.parse(JSON.stringify(inp));
   lt = t;
@@ -96,6 +116,7 @@ async function playerleft() {
 }
 
 function login(name) {
+  if (!connectable) return;
   document.querySelector(".login").style.display = "none";
   view = "loading";
   update();
@@ -120,6 +141,12 @@ function login(name) {
       })
     })
   });
+  socket.on("foodspawn", d => {
+    ingrs.push({ type: d.ingr, x: d.pos[0], y: d.pos[1], spawned: lt });
+  });
+  socket.on("foodcoll", d => {
+    ingrs.splice(ingrs.findIndex(e => e.x == d.x && e.y == d.y), 1);
+  })
   socket.on("usermove", c => {
     console.log("user moved", c);
     let send = players.find(x => x.id == c.sender);
@@ -128,12 +155,7 @@ function login(name) {
   })
   socket.on("clientjoin", newplayer);
   socket.on("clientleft", playerleft);
-  socket.on("disconnect", () => {
-    socket = null;
-    view = "login";
-    errorel.innerHTML = "You were kicked for inactivity.";
-    document.querySelector(".login").style.display = "";
-  });
+  socket.on("disconnect", connectionerror);
 }
 
 document.addEventListener("resize", () => {
@@ -171,3 +193,14 @@ document.addEventListener("click", e => {
 
   }
 })
+
+function connectionerror() {
+  socket = null;
+  view = "login";
+  connectable = false;
+  errorel.innerHTML =
+    `Uh Oh! It seems the server has unexpectedly shut down.<br>
+    Please be aware that I host the server with my own limited time and resources.<br>
+    This will be fixed as soon as possible!`;
+  document.querySelector(".login").style.display = "";
+}
