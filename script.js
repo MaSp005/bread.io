@@ -19,6 +19,7 @@ const { PI, sin, cos, tan, asin, acos, atan, sqrt, floor, random, abs, round, mi
 
 let w = canvas.width = window.innerWidth,
   h = canvas.height = window.innerHeight;
+ctx.imageSmoothingEnabled = false;
 
 let socket = null;
 let view = "login";
@@ -37,6 +38,19 @@ let moving = -1;
 let lt = 0;
 let collected = [0, 0, 0, 0, 0];
 
+let ingrsrc = [
+  "src/sugar.png",
+  "src/salt.png",
+  "src/yeast.png",
+  "src/water.png",
+  "src/flour.png"
+];
+let ingrtext = "     ".split("").map((_, n) => {
+  let i = new Image(16, 16);
+  i.src = ingrsrc[n];
+  return i;
+});
+
 function drawbread(x, y, l, a, n) {
   // switch (a) {
   // console.log("drawing bread at", x, y, l);
@@ -51,13 +65,7 @@ function drawbread(x, y, l, a, n) {
 
 function drawingr(x, y, type, t) {
   ctx.globalAlpha = (15000 - t) / 3000;
-  ctx.fillStyle = ["#f00", "#ff0", "#0f0", "#0ff", "#00f"][type];
-  ctx.fillRect(x - 20, y - 20, 40, 40);
-  // Sugar
-  // Salt
-  // Yeast
-  // Water
-  // Flour
+  ctx.drawImage(ingrtext[type], x - 32, y - 32, 64, 64);
 }
 
 function checklvlup() {
@@ -298,4 +306,4 @@ function tomenu() {
 
 // TODO: bots
 // TODO: General graphics overhaul
-// BUG: inconsitency of ingredients lying around
+// BUG: inconsitency of ingredients lying around (?)
