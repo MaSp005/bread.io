@@ -7,6 +7,15 @@ const colors = {
   bread2: "#fbe8b6",
   gridcol: "#222"
 }
+const { PI, sin, cos, tan, asin, acos, atan, sqrt, floor, random, abs, round, min, max } = Math;
+
+// const actx = new (window.AudioContext || window.webkitAudioContext)();
+// const source = document.getElementsByTagName("audio")[0];
+// const track = actx.createMediaElementSource(source);
+// const gain = actx.createGain(); // Gain Node
+// gain.gain.value = 1;
+
+// track.connect(gain).connect(actx.destination); // connections
 
 let w = canvas.width = window.innerWidth,
   h = canvas.height = window.innerHeight;
@@ -28,7 +37,6 @@ let moving = -1;
 let lt = 0;
 let collected = [0, 0, 0, 0, 0];
 
-// LEGACY: Bread rendering
 function drawbread(x, y, l, a, n) {
   // switch (a) {
   // console.log("drawing bread at", x, y, l);
@@ -89,8 +97,8 @@ function update(t) {
           moving, p.name
         );
         if (p.data.moving > -1 && i) {
-          p.data.pos[0] += Math.sin(p.data.moving / 4 * Math.PI) * td / 5;
-          p.data.pos[1] -= Math.cos(p.data.moving / 4 * Math.PI) * td / 5;
+          p.data.pos[0] += sin(p.data.moving / 4 * PI) * td / 5;
+          p.data.pos[1] -= cos(p.data.moving / 4 * PI) * td / 5;
         }
       })
       if (inpchange) {
@@ -107,19 +115,20 @@ function update(t) {
         socket.send("all", { type: "usermove", direction: moving, pos: me.data.pos });
       }
       if (moving > -1) {
-        me.data.pos[0] += Math.sin(moving / 4 * Math.PI) * td / 5;
-        me.data.pos[1] -= Math.cos(moving / 4 * Math.PI) * td / 5;
+        me.data.pos[0] += sin(moving / 4 * PI) * td / 5;
+        me.data.pos[1] -= cos(moving / 4 * PI) * td / 5;
       }
       ingrs = ingrs.filter(x => t - x.spawned < 15000);
       ingrs.forEach((e, i) => {
-        if (Math.abs(e.x - me.data.pos[0]) + Math.abs(e.y - me.data.pos[1]) < 60) {
-          socket.send("all", { type: "foodcoll", x: e.x, y: e.y });
+        if (abs(e.x - me.data.pos[0]) + abs(e.y - me.data.pos[1]) < 60) {
+          socket.send("all", { type: "foodcoll", id: e.uuid });
           collected[e.type]++;
           checklvlup();
           ingrs.splice(i, 1);
         }
         drawingr(e.x - camera[0], e.y - camera[1], e.type, t - e.spawned);
       })
+      if (!me.data.prot) me.data.lvl -= .0001 * td / 20;
       ctx.globalAlpha = 1;
       ctx.font = "40px Silkscreen";
       ctx.filter = "drop-shadow(2px 2px 10px black)";
@@ -129,8 +138,11 @@ function update(t) {
         ctx.fillText(collected[i], 80 * i + 80, h - 20);
       }
       ctx.textAlign = "right";
-      ctx.fillText(me.data.lvl, w - 20, h - 20);
+      ctx.fillText(me.data.lvl.toFixed(2), w - 20, h - 20);
       ctx.filter = "none";
+      break;
+    case "death":
+      break;
   }
   lastinp = JSON.parse(JSON.stringify(inp));
   lt = t;
@@ -166,11 +178,12 @@ function login(name) {
         me.data = d.data;
         me.data.lvl = 0;
         me.data.prot = true;
-        ingrs = d.ingrs.map(i=>({
+        ingrs = d.ingrs.map(i => ({
           type: i.ingr,
           x: i.pos[0],
           y: i.pos[1],
-          spawned: i.spawned - lt
+          spawned: i.spawned - lt,
+          uuid: i.uuid
         }));
         ping = me.ping[0] + me.ping[1];
         view = "game";
@@ -179,10 +192,12 @@ function login(name) {
     })
   });
   socket.on("foodspawn", d => {
-    ingrs.push({ type: d.ingr, x: d.pos[0], y: d.pos[1], spawned: lt });
+    ingrs.push({ type: d.ingr, x: d.pos[0], y: d.pos[1], spawned: lt, uuid: d.uuid });
   });
   socket.on("foodcoll", d => {
-    ingrs.splice(ingrs.findIndex(e => e.x == d.x && e.y == d.y), 1);
+    console.log("collected", d);
+    console.log(ingrs.findIndex(x => x.uuid == d.id))
+    ingrs.splice(ingrs.findIndex(x => x.uuid == d.id), 1);
   });
   socket.on("usermove", c => {
     console.log("user moved", c);
@@ -190,8 +205,22 @@ function login(name) {
     send.data.moving = c.direction;
     send.data.pos = c.pos;
   });
+  socket.on("lvlup", c => {
+    players[c.sender].data.lvl = c.lvl;
+    players[c.sender].data.prot = false;
+  })
   socket.on("slice", d => {
-    if (me.data.pos[0] - d.x) { }
+    console.log("sliced", d);
+    if (me.id == d.target) {
+      me.data.lvl *= sliceremoval(d.dist);
+    }
+    else {
+      let pl = players.find(p => p.id == d.target);
+      pl.data.lvl *= sliceremoval(d.dist);
+    }
+  });
+  socket.on("kicked", () => {
+    tomenu();
   })
   socket.on("clientjoin", newplayer);
   socket.on("clientleft", playerleft);
@@ -230,20 +259,43 @@ document.addEventListener("keyup", e => {
 });
 document.addEventListener("click", e => {
   if (view == "game") {
-    // TODO: slicing
+    let { x: cx, y: cy } = e;
+    let x = me.data.pos[0];
+    let y = me.data.pos[1];
+    let dist = players.map(p => p.id == me.id ?
+      Infinity : sqrt((x - p.data.pos[0]) ** 2 + (y - p.data.pos[1]) ** 2));
+    let mind = min(...dist);
+    let ind = dist.indexOf(mind);
+    console.log("Slicing", dist, mind, ind);
+    if (players[ind].data.prot || mind > 500) return;
+    if (sqrt(
+      (cx - players[ind].data.pos[0]) ** 2 +
+      (cy - players[ind].data.pos[1]) ** 2
+    ) < 100) return;
+    players[ind].data.lvl *= sliceremoval(mind);
+    socket.send("all", { type: "slice", target: players[ind].id, dist: mind });
   }
 })
 
+function sliceremoval(dist) {
+  return dist < 500 ? (100 - ((dist - 500) ** 2 / 4000)) / 100 : 1;
+}
+
 function connectionerror() {
-  socket = null;
-  view = "login";
   connectable = false;
   errorel.innerHTML =
     `Uh Oh! It seems the server has unexpectedly shut down.<br>
     Please be aware that I host the server with my own limited time and resources.<br>
     This will be fixed as soon as possible!`;
+  tomenu();
+}
+
+function tomenu() {
+  socket = null;
+  view = "login";
   document.querySelector(".login").style.display = "";
 }
 
-// TODO: shrinking
-// TODO: death
+// TODO: bots
+// TODO: General graphics overhaul
+// BUG: inconsitency of ingredients lying around
