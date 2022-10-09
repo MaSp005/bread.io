@@ -39,6 +39,8 @@ let moving = -1;
 let lt = 0;
 let collected = [0, 0, 0, 0, 0];
 let lasta = 0;
+let sliceto = 0;
+let damageind = 0;
 
 let ingrsrc = [
   "src/sugar.png",
@@ -67,6 +69,9 @@ let breadcutfilllefttext = new Image();
 breadcutfilllefttext.src = "src/breadcutfillleft.png";
 let breadcutlefttext = new Image();
 breadcutlefttext.src = "src/breadcutleft.png";
+
+let knifetext = new Image();
+knifetext.src = "src/knife.png";
 
 function breadpatt(x, y) {
   ctx.moveTo(x - 50, y);
@@ -117,6 +122,9 @@ function drawbread(x, y, l, a, n) {
     l += 40;
     ctx.drawImage(breadcutrighttext, x + l / 2 - 47, y + l / 2, 94, 94);
   }
+  ctx.fillStyle = "white";
+  ctx.textAlign = "center";
+  ctx.fillText(n, x, y - 70);
 }
 
 function drawingr(x, y, type, t) {
@@ -158,11 +166,20 @@ function update(t) {
           p.data.pos[0] - camera[0],
           p.data.pos[1] - camera[1],
           p.data.lvl * 30 + 40,
-          p.data.moving, p.name
+          p.data.moving == -1 ? p.data.lastrot : p.data.moving,
+          p.name
         );
         if (p.data.moving > -1 && i) {
           p.data.pos[0] += sin(p.data.moving / 4 * PI) * td / 5;
           p.data.pos[1] -= cos(p.data.moving / 4 * PI) * td / 5;
+        }
+        if(p.data.sliceanim > 0){
+          p.data.sliceanim -= .02;
+          ctx.drawImage(
+            knifetext, p.data.pos[0] - camera[0] - 50,
+            p.data.pos[1] - camera[1] - cos((1 - p.data.sliceanim) * PI) * 40 - 30,
+            100, 100
+          )
         }
       })
       drawbread(
@@ -215,6 +232,7 @@ function update(t) {
     case "death":
       break;
   }
+  if (sliceto > 0) sliceto -= 1;
   lastinp = JSON.parse(JSON.stringify(inp));
   lt = t;
   requestAnimationFrame(update);
@@ -273,6 +291,7 @@ function login(name) {
   socket.on("usermove", c => {
     console.log("user moved", c);
     let send = players.find(x => x.id == c.sender);
+    if (c.direction == -1) send.data.lastrot = send.data.moving;
     send.data.moving = c.direction;
     send.data.pos = c.pos;
   });
@@ -284,10 +303,12 @@ function login(name) {
     console.log("sliced", d);
     if (me.id == d.target) {
       me.data.lvl *= sliceremoval(d.dist);
-    }
-    else {
+      damageind += sliceremoval(d.dist);
+      me.data.sliceanim = 1;
+    } else {
       let pl = players.find(p => p.id == d.target);
       pl.data.lvl *= sliceremoval(d.dist);
+      pl.data.sliceanim = 1;
     }
   });
   socket.on("kicked", () => {
@@ -330,6 +351,7 @@ document.addEventListener("keyup", e => {
 });
 document.addEventListener("click", e => {
   if (view == "game") {
+    if (sliceto > 0) return;
     let { x: cx, y: cy } = e;
     let x = me.data.pos[0];
     let y = me.data.pos[1];
@@ -343,6 +365,7 @@ document.addEventListener("click", e => {
       (cx - players[ind].data.pos[0]) ** 2 +
       (cy - players[ind].data.pos[1]) ** 2
     ) < 100) return;
+    sliceto = 100;
     players[ind].data.lvl *= sliceremoval(mind);
     socket.send("all", { type: "slice", target: players[ind].id, dist: mind });
   }
@@ -368,5 +391,6 @@ function tomenu() {
 }
 
 // TODO: bots
-// TODO: General graphics overhaul
 // BUG: inconsitency of ingredients lying around (?)
+// BUG: slices not shown on other players
+// TODO: put on server ofc
