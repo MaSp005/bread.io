@@ -5,6 +5,7 @@ const errorel = document.querySelector("p.error");
 const colors = {
   bread1: "#d39d82",
   bread2: "#fbe8b6",
+  bread3: "#cc927a",
   gridcol: "#222"
 }
 const { PI, sin, cos, tan, asin, acos, atan, sqrt, floor, random, abs, round, min, max } = Math;
@@ -37,6 +38,7 @@ let inpchange = false;
 let moving = -1;
 let lt = 0;
 let collected = [0, 0, 0, 0, 0];
+let lasta = 0;
 
 let ingrsrc = [
   "src/sugar.png",
@@ -50,17 +52,71 @@ let ingrtext = "     ".split("").map((_, n) => {
   i.src = ingrsrc[n];
   return i;
 });
+let breadcuttext = new Image();
+breadcuttext.src = "src/breadcut.png";
+let breadcutfilltext = new Image();
+breadcutfilltext.src = "src/breadcutfill.png";
+let breadsidetext = new Image();
+breadsidetext.src = "src/breadside.png";
+
+let breadcutfillrighttext = new Image();
+breadcutfillrighttext.src = "src/breadcutfillright.png";
+let breadcutrighttext = new Image();
+breadcutrighttext.src = "src/breadcutright.png";
+let breadcutfilllefttext = new Image();
+breadcutfilllefttext.src = "src/breadcutfillleft.png";
+let breadcutlefttext = new Image();
+breadcutlefttext.src = "src/breadcutleft.png";
+
+function breadpatt(x, y) {
+  ctx.moveTo(x - 50, y);
+  ctx.lineTo(x - 50, y - 30);
+  ctx.lineTo(x + 50, y - 30);
+  ctx.moveTo(x + 50, y);
+  ctx.closePath();
+}
 
 function drawbread(x, y, l, a, n) {
-  // switch (a) {
-  // console.log("drawing bread at", x, y, l);
-  ctx.fillStyle = colors.bread1;
-  ctx.fillRect(x - l / 2, y - 50, l, 100);
-  ctx.fillStyle = colors.bread2;
-  ctx.fillRect(x - l / 3, y - 40, l / 1.5, 80);
-  ctx.fillStyle = "white";
-  ctx.textAlign = "center";
-  ctx.fillText(n, x, y - 70);
+  if (a == 0 || a == 4) {
+    ctx.drawImage(breadcutfilltext, x - 50, y - l / 2, 100, 94);
+    ctx.fillStyle = colors.bread1;
+    ctx.fillRect(x - 48, y - l / 2 + 27, 96, l);
+    ctx.drawImage(breadcuttext, x - 50, y + l / 2, 100, 94);
+  } else if (a == 2 || a == 6) {
+    y += 20;
+    ctx.drawImage(breadsidetext, x - l / 2 - 23, y - 47, 47, 94);
+    ctx.drawImage(breadsidetext, x + l / 2 - 23, y - 47, 47, 94);
+    ctx.fillStyle = colors.bread1;
+    ctx.fillRect(x - l / 2, y - 33, l, 77);
+    ctx.fillStyle = colors.bread3;
+    ctx.fillRect(x - l / 2, y + 2, l, 4);
+  } else if (a == 1 || a == 5) {
+    ctx.drawImage(breadcutfilllefttext, x + l / 2 - 47, y - l / 2, 94, 94);
+    ctx.fillStyle = colors.bread1;
+    l -= 40;
+    ctx.beginPath();
+    ctx.moveTo(x - 40 - l / 2, y + 40 + l / 2);
+    ctx.lineTo(x + 5 + l / 2, y - 5 - l / 2);
+    ctx.lineTo(x + 50 + l / 2, y + 70 - l / 2);
+    ctx.lineTo(x + 10 - l / 2, y + 110 + l / 2);
+    ctx.closePath();
+    ctx.fill();
+    l += 40;
+    ctx.drawImage(breadcutlefttext, x - l / 2 - 47, y + l / 2, 94, 94);
+  } else if (a == 3 || a == 7) {
+    ctx.drawImage(breadcutfillrighttext, x - l / 2 - 47, y - l / 2, 94, 94);
+    ctx.fillStyle = colors.bread1;
+    l -= 40;
+    ctx.beginPath();
+    ctx.moveTo(x - 50 - l / 2, y + 70 - l / 2);
+    ctx.lineTo(x - 7 + l / 2, y + 112 + l / 2);
+    ctx.lineTo(x + 40 + l / 2, y + 38 + l / 2);
+    ctx.lineTo(x - 10 - l / 2, y - 10 - l / 2);
+    ctx.closePath();
+    ctx.fill();
+    l += 40;
+    ctx.drawImage(breadcutrighttext, x + l / 2 - 47, y + l / 2, 94, 94);
+  }
 }
 
 function drawingr(x, y, type, t) {
@@ -98,17 +154,23 @@ function update(t) {
       [me, ...players].forEach((p, i) => {
         if (i && p.id == me.id) return;
         if (!p.data?.pos) return;
-        drawbread(
+        if (i) drawbread(
           p.data.pos[0] - camera[0],
           p.data.pos[1] - camera[1],
           p.data.lvl * 30 + 40,
-          moving, p.name
+          p.data.moving, p.name
         );
         if (p.data.moving > -1 && i) {
           p.data.pos[0] += sin(p.data.moving / 4 * PI) * td / 5;
           p.data.pos[1] -= cos(p.data.moving / 4 * PI) * td / 5;
         }
       })
+      drawbread(
+        me.data.pos[0] - camera[0],
+        me.data.pos[1] - camera[1],
+        me.data.lvl * 30 + 40,
+        moving == -1 ? lasta : moving, me.name
+      );
       if (inpchange) {
         inpchange = false;
         moving = -1;
@@ -125,6 +187,7 @@ function update(t) {
       if (moving > -1) {
         me.data.pos[0] += sin(moving / 4 * PI) * td / 5;
         me.data.pos[1] -= cos(moving / 4 * PI) * td / 5;
+        lasta = moving;
       }
       ingrs = ingrs.filter(x => t - x.spawned < 15000);
       ingrs.forEach((e, i) => {
