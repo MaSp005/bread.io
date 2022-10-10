@@ -82,6 +82,44 @@ canvas, .login {
   font-family: Rajdhani;
 }
 
+.lead {
+  display: flex;
+  background: #0005;
+  border: 2px solid white;
+  border-radius: 15px;
+  width: 20%;
+  color: white;
+  flex-direction: column;
+  z-index: 2;
+  position: fixed;
+  right: 20px;
+  top: 20px;
+}
+.lead h1 {
+  font-family: Silkscreen;
+  margin: 0;
+  text-align: center;
+}
+.lead div {
+  display: flex;
+  flex-direction: row;
+  padding: 10px;
+  font-family: Rajdhani;
+}
+.lead div lvl {
+  width: 20%;
+  text-align: left;
+}
+.lead div name {
+  width: 80%;
+  text-align: right;
+}
+.lead div.me {
+  background: #ff05;
+  border-radius: 10px;
+  font-weight: bold;
+}
+
 canvas {
   background-image: radial-gradient(circle at center, #171717, #070707);
 }

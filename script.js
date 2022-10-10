@@ -2,6 +2,7 @@ const canvas = document.querySelector("canvas");
 const ctx = canvas.getContext("2d");
 const nameinp = document.querySelector("input");
 const errorel = document.querySelector("p.error");
+const leadel = document.querySelector(".lead");
 const colors = {
   bread1: "#d39d82",
   bread2: "#fbe8b6",
@@ -173,7 +174,7 @@ function update(t) {
           p.data.pos[0] += sin(p.data.moving / 4 * PI) * td / 5;
           p.data.pos[1] -= cos(p.data.moving / 4 * PI) * td / 5;
         }
-        if(p.data.sliceanim > 0){
+        if (p.data.sliceanim > 0) {
           p.data.sliceanim -= .02;
           ctx.drawImage(
             knifetext, p.data.pos[0] - camera[0] - 50,
@@ -188,6 +189,7 @@ function update(t) {
         me.data.lvl * 30 + 40,
         moving == -1 ? lasta : moving, me.name
       );
+
       if (inpchange) {
         inpchange = false;
         moving = -1;
@@ -206,6 +208,7 @@ function update(t) {
         me.data.pos[1] -= cos(moving / 4 * PI) * td / 5;
         lasta = moving;
       }
+
       ingrs = ingrs.filter(x => t - x.spawned < 15000);
       ingrs.forEach((e, i) => {
         if (abs(e.x - me.data.pos[0]) + abs(e.y - me.data.pos[1]) < 60) {
@@ -216,6 +219,7 @@ function update(t) {
         }
         drawingr(e.x - camera[0], e.y - camera[1], e.type, t - e.spawned);
       })
+
       if (!me.data.prot) me.data.lvl -= .0001 * td / 20;
       ctx.globalAlpha = 1;
       ctx.font = "40px Silkscreen";
@@ -228,6 +232,16 @@ function update(t) {
       ctx.textAlign = "right";
       ctx.fillText(me.data.lvl.toFixed(2), w - 20, h - 20);
       ctx.filter = "none";
+
+      leadel.innerHTML = "<h1>Leaderboard</h1>";
+      players.sort((a,b)=>a.lvl-b.lvl).slice(0,9).forEach(p=>{
+        let e = document.createElement("div");
+        if (p.id == me.id) e.className = "me";
+        e.innerHTML =
+        `<lvl>${(p.id == me.id ? me.data.lvl : p.data.lvl).toFixed(1)}</lvl>
+        <name>${p.name}</name>`;
+        leadel.appendChild(e);
+      });
       break;
     case "death":
       break;
@@ -276,6 +290,7 @@ function login(name) {
         }));
         ping = me.ping[0] + me.ping[1];
         view = "game";
+        leadel.style.display = "";
         console.log(me);
       })
     })
@@ -319,9 +334,10 @@ function login(name) {
   socket.on("disconnect", connectionerror);
 }
 
-document.addEventListener("resize", () => {
+window.addEventListener("resize", () => {
   w = canvas.width = window.innerWidth;
   h = canvas.height = window.innerHeight;
+  ctx.imageSmoothingEnabled = false;
 });
 
 nameinp.addEventListener("input", e => {
@@ -387,6 +403,7 @@ function connectionerror() {
 function tomenu() {
   socket = null;
   view = "login";
+  leadel.style.display = "none";
   document.querySelector(".login").style.display = "";
 }
 
