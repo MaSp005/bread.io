@@ -225,16 +225,16 @@ function update(t) {
       ctx.font = "40px Silkscreen";
       ctx.filter = "drop-shadow(2px 2px 10px black)";
       for (i = 0; i < 5; i++) {
-        drawingr(80 * i + 40, h - 40, i);
+        drawingr(100 * i + 40, h - 40, i);
         ctx.fillStyle = "white";
-        ctx.fillText(collected[i], 80 * i + 80, h - 20);
+        ctx.fillText(collected[i], 100 * i + 90, h - 20);
       }
       ctx.textAlign = "right";
       ctx.fillText(me.data.lvl.toFixed(2), w - 20, h - 20);
       ctx.filter = "none";
 
       leadel.innerHTML = "<h1>Leaderboard</h1>";
-      players.sort((a,b)=>a.lvl-b.lvl).slice(0,9).forEach(p=>{
+      players.sort((a, b) => a.lvl - b.lvl).slice(0, 9).reverse().forEach(p => {
         let e = document.createElement("div");
         if (p.id == me.id) e.className = "me";
         e.innerHTML =
@@ -242,6 +242,18 @@ function update(t) {
         <name>${p.name}</name>`;
         leadel.appendChild(e);
       });
+
+      if (damageind > 0) {
+        damageind -= .004;
+        let grad = ctx.createRadialGradient(w / 2, h / 2, 100, w / 2, h / 2, 800);
+        grad.addColorStop(0, "transparent");
+        grad.addColorStop(1 - damageind, "transparent");
+        let col = floor(max(0, damageind) * 16).toString(16);
+        console.log(col);
+        grad.addColorStop(1, "#900" + col);
+        ctx.fillStyle = grad;
+        ctx.fillRect(0, 0, w, h);
+      }
       break;
     case "death":
       break;
@@ -311,6 +323,7 @@ function login(name) {
     send.data.pos = c.pos;
   });
   socket.on("lvlup", c => {
+    console.log("level up:", c)
     players[c.sender].data.lvl = c.lvl;
     players[c.sender].data.prot = false;
   })
@@ -383,6 +396,7 @@ document.addEventListener("click", e => {
     ) < 100) return;
     sliceto = 100;
     players[ind].data.lvl *= sliceremoval(mind);
+    players[ind].data.sliceanim = 1;
     socket.send("all", { type: "slice", target: players[ind].id, dist: mind });
   }
 })
@@ -407,7 +421,5 @@ function tomenu() {
   document.querySelector(".login").style.display = "";
 }
 
-// TODO: bots
+// TODO: better bots
 // BUG: inconsitency of ingredients lying around (?)
-// BUG: slices not shown on other players
-// TODO: put on server ofc
