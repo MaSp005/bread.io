@@ -246,13 +246,14 @@ function update(t) {
       if (damageind > 0) {
         damageind -= .004;
         let grad = ctx.createRadialGradient(w / 2, h / 2, 100, w / 2, h / 2, 800);
-        grad.addColorStop(0, "transparent");
-        grad.addColorStop(1 - damageind, "transparent");
-        let col = floor(max(0, damageind) * 16).toString(16);
-        console.log(col);
-        grad.addColorStop(1, "#900" + col);
-        ctx.fillStyle = grad;
-        ctx.fillRect(0, 0, w, h);
+        try {
+          grad.addColorStop(0, "transparent");
+          grad.addColorStop(1 - damageind, "transparent");
+          let col = floor(max(0, damageind) * 16).toString(16);
+          grad.addColorStop(1, "#900" + col);
+          ctx.fillStyle = grad;
+          ctx.fillRect(0, 0, w, h);
+        } catch {}
       }
       break;
     case "death":
