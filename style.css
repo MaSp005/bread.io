@@ -87,7 +87,7 @@ canvas, .login {
   background: #0005;
   border: 2px solid white;
   border-radius: 15px;
-  width: 20%;
+  width: 300px;
   color: white;
   flex-direction: column;
   z-index: 2;
