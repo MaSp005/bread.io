@@ -11,13 +11,16 @@ const colors = {
 }
 const { PI, sin, cos, tan, asin, acos, atan, sqrt, floor, random, abs, round, min, max } = Math;
 
-// const actx = new (window.AudioContext || window.webkitAudioContext)();
-// const source = document.getElementsByTagName("audio")[0];
-// const track = actx.createMediaElementSource(source);
-// const gain = actx.createGain(); // Gain Node
-// gain.gain.value = 1;
+const actx = new (window.AudioContext || window.webkitAudioContext)();
+const collsource = document.getElementsByTagName("audio")[0];
+const slicesource = document.getElementsByTagName("audio")[1];
+const colltrack = actx.createMediaElementSource(collsource);
+const slicetrack = actx.createMediaElementSource(slicesource);
+const gain = actx.createGain();
+gain.gain.value = 1;
 
-// track.connect(gain).connect(actx.destination); // connections
+colltrack.connect(gain).connect(actx.destination);
+slicetrack.connect(gain).connect(actx.destination);
 
 let w = canvas.width = window.innerWidth,
   h = canvas.height = window.innerHeight;
@@ -139,6 +142,7 @@ function checklvlup() {
   me.data.lvl++;
   socket.send("all", { type: "lvlup", lvl: me.data.lvl });
   me.data.prot = false;
+  collsource.play();
 }
 
 function update(t) {
@@ -163,6 +167,11 @@ function update(t) {
       [me, ...players].forEach((p, i) => {
         if (i && p.id == me.id) return;
         if (!p.data?.pos) return;
+        if (p.data.moving > -1 && i) {
+          p.data.pos[0] += sin(p.data.moving / 4 * PI) * td / 5;
+          p.data.pos[1] -= cos(p.data.moving / 4 * PI) * td / 5;
+        }
+        if (abs(camera[0] - p.data.pos[0]) > w || abs(camera[1] - p.data.pos[1] > h)) return;
         if (i) drawbread(
           p.data.pos[0] - camera[0],
           p.data.pos[1] - camera[1],
@@ -170,10 +179,6 @@ function update(t) {
           p.data.moving == -1 ? p.data.lastrot : p.data.moving,
           p.name
         );
-        if (p.data.moving > -1 && i) {
-          p.data.pos[0] += sin(p.data.moving / 4 * PI) * td / 5;
-          p.data.pos[1] -= cos(p.data.moving / 4 * PI) * td / 5;
-        }
         if (p.data.sliceanim > 0) {
           p.data.sliceanim -= .02;
           ctx.drawImage(
@@ -256,8 +261,6 @@ function update(t) {
         } catch {}
       }
       break;
-    case "death":
-      break;
   }
   if (sliceto > 0) sliceto -= 1;
   lastinp = JSON.parse(JSON.stringify(inp));
@@ -303,6 +306,7 @@ function login(name) {
         }));
         ping = me.ping[0] + me.ping[1];
         view = "game";
+        collsource.play();
         leadel.style.display = "";
         console.log(me);
       })
@@ -331,6 +335,7 @@ function login(name) {
   socket.on("slice", d => {
     console.log("sliced", d);
     if (me.id == d.target) {
+      slicesource.play();
       me.data.lvl *= sliceremoval(d.dist);
       damageind += sliceremoval(d.dist);
       me.data.sliceanim = 1;
